@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Azure AI Chatbot</title>
+  <style>
+    #chatbox { border: 1px solid #ccc; padding: 10px; width: 400px; height: 400px; overflow-y: auto; }
+    .msg { margin: 5px 0; }
+    .user { font-weight: bold; color: blue; }
+    .assistant { font-weight: bold; color: green; }
+  </style>
+</head>
+<body>
+  <div id="chatbox"></div>
+  <input type="text" id="userInput" placeholder="Ask me something..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const chatbox = document.getElementById("chatbox");
+
+      const userMessage = input.value;
+      chatbox.innerHTML += `<div class="msg user">You: ${userMessage}</div>`;
+      input.value = "";
+
+      const response = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage })
+      });
+
+      const data = await response.json();
+      chatbox.innerHTML += `<div class="msg assistant">AI: ${data.message}</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+  </script>
+</body>
+
+<footer>
+      <div id="chatbox"></div>
+  <input type="text" id="userInput" placeholder="Ask me something..." />
+  <button onclick="sendMessage()">Send</button>
+
+  <script>
+    async function sendMessage() {
+      const input = document.getElementById("userInput");
+      const chatbox = document.getElementById("chatbox");
+
+      const userMessage = input.value;
+      chatbox.innerHTML += `<div class="msg user">You: ${userMessage}</div>`;
+      input.value = "";
+
+      const response = await fetch("http://127.0.0.1:8000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage })
+      });
+
+      const data = await response.json();
+      chatbox.innerHTML += `<div class="msg assistant">AI: ${data.message}</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+  </script>
+<script src="ai_d/script_azure.js"></script>
+</footer>
+</html>
