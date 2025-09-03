@@ -5,7 +5,7 @@
     
     const config = {
         branding: {
-            logo: 'images.png',
+            logo: 'logo.png',
             name: 'AI-D',
             welcomeText: 'Hello, how can we help?',
             responseTimeText: 'We usually respond immediately.',

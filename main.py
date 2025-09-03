@@ -264,10 +264,3 @@ def make_summary(thread_id):
 
 # 1. When the user sends their last message, the conversation doesn't end until time runs out.
 # 2. auto-reply message (could do it in both languages)
-
-
-# make a third agent that returns True or False based on whether it thinks it's the last message?
-# do I need to make sure the conversation ends completely once the user sends their "final" message or is it ok if they can still send messages to the same thread?
-# use first chatbot to recognize when the conversation ends
-
-
