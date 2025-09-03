@@ -2,10 +2,6 @@
     // Prevent multiple initializations
     if (window.AI_DChatWidgetInitialized) return;
     window.AI_DChatWidgetInitialized = true;
-
-    // const styleSheet = document.createElement('style');
-    // styleSheet.textContent = styles;
-    // document.head.appendChild(styleSheet);
     
     const config = {
         branding: {
@@ -42,7 +38,7 @@
 
         const newConversationHTML = `
         <div class="brand-header">
-            <img src="${config.branding.logo}" alt="${config.branding.name}>
+            <img src="${config.branding.logo}" alt="${config.branding.name}">
             <span>${config.branding.name}</span>
             <button class="close-button">×</button>
         </div>
@@ -102,17 +98,9 @@
 
     let userConversationMessage;
 
-    // async function checkIfDialogueWasStarted() {
-    //     if (sessionStorage.getItem("session_id")) {
-    //         chatContainer.querySelector('.brand-header').style.display = 'none';
-    //         chatContainer.querySelector('.new-conversation').style.display = 'none';
-    //         chatInterface.classList.add('active');
-    //     }
-    // }
-
     async function endConversation() {
-        const response = await fetch("http://127.0.0.1:8000/end_conversation", {
-        // const response = await fetch("https://ai-d-chatbot.onrender.com/start", {
+        // const response = await fetch("http://127.0.0.1:8000/end_conversation", {
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
             method: "POST",
             headers: {"Content-type": "application/json"},
             body: JSON.stringify({thread_id: sessionStorage.getItem("thread_id")})
@@ -127,7 +115,7 @@
         timeoutId = setTimeout(async () => {
         const botMessageDiv = document.createElement('div');
         botMessageDiv.className = 'chat-message bot';
-        botMessageDiv.textContent = "Het spijt ons, maar het tijd van het gesprek is voorbij. " +
+        botMessageDiv.textContent = "Het spijt ons, maar de tijd van het gesprek is voorbij. " +
                                     "U kunt ons nogmaals contacteren als u een vraag hebt.";
         messagesContainer.appendChild(botMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -166,8 +154,8 @@
             appendBotMessage("Hallo, hoe kan ik u vandaag helpen?");
         }
 
-        const response = await fetch("http://127.0.0.1:8000/start", {
-        // const response = await fetch("https://ai-d-chatbot.onrender.com/start", {
+        // const response = await fetch("http://127.0.0.1:8000/start", {
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({message: messageToSend})
@@ -191,8 +179,11 @@
         messagesContainer.appendChild(userMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        const response = await fetch("http://127.0.0.1:8000/chat", {
-        // const response = await fetch("https://ai-d-chatbot.onrender.com/chat", {
+        // const response = await fetch("http://127.0.0.1:8000/chat", {
+
+        const indicator = showTypingIndicator();
+
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({message: userMessage, thread_id: sessionStorage.getItem("thread_id")})
@@ -200,8 +191,9 @@
 
         const data = await response.json();
 
+        removeTypingIndicator(indicator);
+
         if (data.message === "True") {
-            appendBotMessage("Tot straks! Bye!")
             appendBotMessage("Dit gesprek is beëindigd. Wil je een nieuw gesprek beginnen, stuur dan een nieuw bericht. This conversation ended. If you want to start a new conversation, send a new message.")
             clearTimeout(timeoutId);
             endConversation();
@@ -243,7 +235,6 @@
 
     toggleButton.addEventListener('click', () => {
         chatContainer.classList.toggle('open');
-        // checkIfDialogueWasStarted();
     });
 
 
@@ -255,10 +246,23 @@
         });
     });
 
-    window.addEventListener("beforeunload", (e) => {
-        navigator.sendBeacon("/end_conversation", {thread_id: sessionStorage.getItem("thread_id")})
+    function showTypingIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'chat-message bot typing-indicator';
+        indicator.innerHTML = `
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+            <span class="typing-dot"></span>
+        `;
+        messagesContainer.appendChild(indicator);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        return indicator; // so you can remove it later
+        }
 
-        e.preventDefault();
-        // event.returnValue = "";
-    })
+    function removeTypingIndicator(indicator) {
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+        }
+
 })();

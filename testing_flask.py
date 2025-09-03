@@ -270,4 +270,4 @@ def make_summary(thread_id):
 # do I need to make sure the conversation ends completely once the user sends their "final" message or is it ok if they can still send messages to the same thread?
 # use first chatbot to recognize when the conversation ends
 
-# Do I need to store a conversation if it ends by closing a page?
+
