@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 import os
 import time
 import json
+import asyncio
+from contextlib import asynccontextmanager
 from supabase import create_client, Client
 
 load_dotenv()
@@ -17,7 +19,19 @@ key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(save_finished_threads())
+    yield
+
+    # cleanup on shutdown
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+app = FastAPI(lifespan=lifespan)
 
 # Allow frontend (JavaScript in browser) to talk to backend
 app.add_middleware(
@@ -44,14 +58,34 @@ agent_summary_thread = project.agents.threads.create()
 
 # Store the last message's time for each thread.
 ONGOING_THREADS = {}
-# Last time the ongoing threads have been checked. (Used to not check it very often but after a specific time.)
-last_time_checked = time.time()
-
-# How often the threads are checked for being finished (in seconds)
-update_rate = 30
 
 # How much time a user has to respond before the chat is archived (in seconds)
 time_limit_user_message = 30
+
+async def save_finished_threads():
+    while True:
+        # Limit the number of threads to check so that it doesn't take up a lot of time
+        threads_to_check = 4
+        # making a list so that the changes are not made during the iteration
+        threads_to_remove = []
+
+        for thread_id, last_message_time in ONGOING_THREADS.items():
+            if threads_to_check == 0:
+                break
+            
+            time_now = time.time()
+            if time_now - last_message_time > time_limit_user_message:
+                threads_to_remove.append(thread_id)
+
+                make_summary(thread_id)
+
+        threads_to_check -= 1
+        for thread_id in threads_to_remove:
+            ONGOING_THREADS.pop(thread_id, None)
+
+        print("thread is working")
+        await asyncio.sleep(30)
+
 
 def insert_chatbot_message(thread_id, table_name, json_msg=False):
     """Function that gets a chatbot message and
@@ -92,59 +126,6 @@ def insert_chatbot_message(thread_id, table_name, json_msg=False):
     
     return {"role": "assistant", "message": "No response", "thread_id": thread_id}
 
-
-
-
-def save_finished_threads():
-    global last_time_checked
-    time_now = time.time()
-    # Limit the number of threads to check so that it doesn't take up a lot of time
-    threads_to_check = 4
-    # making a list so that the changes are not made during the iteration
-    threads_to_remove = []
-
-    if time_now - last_time_checked > update_rate:
-        last_time_checked = time_now
-        for thread_id, last_message_time in ONGOING_THREADS.items():
-            if threads_to_check == 0:
-                break
-            
-            if time_now - last_message_time > time_limit_user_message:
-                threads_to_remove.append(thread_id)
-
-                # Get a conversation in JSON format
-                conversations = (
-                    supabase.table("chatbot_data")
-                    .select("role, message")
-                    .eq("thread_id", thread_id)
-                    .execute()
-                    ).data
-                
-                
-                # conversations_str = "conversations_str value: ".join(f"{conv['role']}: {conv['message']}" for conv in conversations)
-                conversations_str = "".join(f"{conv['role']}: {conv['message']}" for conv in conversations)
-                
-
-                # Make a message with conversation as value (summary agent)
-                message = project.agents.messages.create(
-                    thread_id=agent_summary_thread.id,
-                    role="user",
-                    content=conversations_str
-                )
-
-                # Pass the message onto summary agent
-                run = project.agents.runs.create_and_process(
-                    thread_id=agent_summary_thread.id,
-                    agent_id=agent_summary.id
-                )
-
-                insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", True)
-
-        threads_to_check -= 1
-        for thread_id in threads_to_remove:
-            ONGOING_THREADS.pop(thread_id, None)
-
-
 @app.get("/health")
 async def root():
     return {"status": "ok"}
@@ -154,20 +135,28 @@ def home():
     return "<h1>AI-D Chatbot API is running! </h1><p>Use POST /chat to talk to the bot.</p>"
 
 @app.get("/chat", response_class=HTMLResponse)
-def home():
+def home_chat():
     return "<h1>AI-D Chatbot API is running! </h1><p>Use POST /chat to talk to the bot.</p>"
 
 @app.post("/start")
 async def give_thread_id(request: Request):
     data = await request.json()
     user_input = data["message"]
-    # In case it's an initial message when the user clicks on start a conversation
-    # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
-    if user_input == None:
-        user_input = "Hallo"
 
     # Creating a thread for a new user
     thread = project.agents.threads.create()
+
+    # In case it's an initial message when the user clicks on start a conversation
+    # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
+    if user_input == None:
+        return {"thread_id": thread.id}
+    else:
+        response_user = (
+        supabase.table("chatbot_data")
+        .insert({"role": "user", "message": user_input, "thread_id": thread.id})
+        .execute()
+    )
+
 
     ONGOING_THREADS[thread.id] = time.time() 
 
@@ -212,24 +201,62 @@ async def chat(request: Request):
         agent_id=agent_data.id
     )
 
-    save_finished_threads()
-
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
       
     return insert_chatbot_message(user_thread_id, "chatbot_data")
 
-# Problems for now
-# 1. How to end a conversation
-    # Make a timer or check for a specific ending of a message ("Tot ziens!")?
+@app.post("/end_conversation")
+async def end_conversation(request: Request):
+    data = await request.json()
+    thread_id = data["thread_id"]
 
-# Done but need to make sure it works
-# 1. Individual history
+    ONGOING_THREADS.pop(thread_id, None)
+    print(thread_id)
+
+    make_summary(thread_id)
+
+
+
+def make_summary(thread_id):
+    # Get a conversation in JSON format
+    message_list = (
+        supabase.table("chatbot_data")
+        .select("role, message")
+        .eq("thread_id", thread_id)
+        .execute()
+        ).data
+
+    print(message_list)
+
+    conversation = "".join(f"{message['role']}: {message['message']}\n" for message in message_list)
+
+    # Make a message with conversation as value (summary agent)
+    message = project.agents.messages.create(
+        thread_id=agent_summary_thread.id,
+        role="user",
+        content=conversation
+    )
+
+    # Pass the message onto summary agent
+    run = project.agents.runs.create_and_process(
+        thread_id=agent_summary_thread.id,
+        agent_id=agent_summary.id
+    )
+
+    insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", True)
+
+
+
+
+
 
 
 # Further steps
 # 1. cal.com api to make a meeting 
-# 2. layout fix (logo etc)
+# 2. layout fix (logo etc), make sure the times (x) symbol actually works
+# 3. dot dot dot bubble
+# 4. word documentation
 
 # WXyT79wgf9s4R6w3
 
@@ -239,4 +266,8 @@ async def chat(request: Request):
 # 2. auto-reply message (could do it in both languages)
 
 
+# make a third agent that returns True or False based on whether it thinks it's the last message?
+# do I need to make sure the conversation ends completely once the user sends their "final" message or is it ok if they can still send messages to the same thread?
+# use first chatbot to recognize when the conversation ends
 
+# Do I need to store a conversation if it ends by closing a page?

@@ -91,10 +91,11 @@
     const sendButton = chatContainer.querySelector('button[type="submit"]');
 
 
-    let thread_id = null;
-
     // Used to check whether a conversation ran for too much time without a user's input.
     let userIsLate = false;
+
+    // Used to end a conversation after receiving a final message
+    let conversationEnded = false;
 
     // Used to reset the timeout if the user sends a message before the time has run out
     let timeoutId;
@@ -109,12 +110,21 @@
     //     }
     // }
 
+    async function endConversation() {
+        const response = await fetch("http://127.0.0.1:8000/end_conversation", {
+        // const response = await fetch("https://ai-d-chatbot.onrender.com/start", {
+            method: "POST",
+            headers: {"Content-type": "application/json"},
+            body: JSON.stringify({thread_id: sessionStorage.getItem("thread_id")})
+        });
+    }
+
     function startTimeout() {
         if (timeoutId) {
             clearTimeout(timeoutId);
         }
 
-        timeoutId = setTimeout(() => {
+        timeoutId = setTimeout(async () => {
         const botMessageDiv = document.createElement('div');
         botMessageDiv.className = 'chat-message bot';
         botMessageDiv.textContent = "Het spijt ons, maar het tijd van het gesprek is voorbij. " +
@@ -122,13 +132,15 @@
         messagesContainer.appendChild(botMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
         userIsLate = true;
+
+        endConversation();
     }, 30000);
     }
 
-    function createBotMessage(data) {
+    function appendBotMessage(message) {
         const botMessageDiv = document.createElement('div');
         botMessageDiv.className = 'chat-message bot';
-        botMessageDiv.textContent = data.message;
+        botMessageDiv.textContent = message;
         messagesContainer.appendChild(botMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
@@ -138,30 +150,37 @@
         startTimeout(); 
         // userMessage is not null in case the user is starting a conversation anew
         // (when the time of the previous one ran out)
+
+        let messageToSend = null;
         if (userMessage) {
+            messageToSend = userMessage;
             const userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'chat-message user';
             userMessageDiv.textContent = userMessage;
             messagesContainer.appendChild(userMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } else {
+            chatContainer.querySelector('.brand-header').style.display = 'none';
+            chatContainer.querySelector('.new-conversation').style.display = 'none';
+            chatInterface.classList.add('active');
+            appendBotMessage("Hallo, hoe kan ik u vandaag helpen?");
         }
-        // const response = await fetch("http://127.0.0.1:8000/start", {
-        const response = await fetch("https://ai-d-chatbot.onrender.com/start", {
+
+        const response = await fetch("http://127.0.0.1:8000/start", {
+        // const response = await fetch("https://ai-d-chatbot.onrender.com/start", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({message: userMessage})
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({message: messageToSend})
         });
 
         const data = await response.json();
         
-        thread_id = data.thread_id;
-        sessionStorage.setItem("thread_id", thread_id);
+        sessionStorage.setItem("thread_id", data.thread_id);
 
-        chatContainer.querySelector('.brand-header').style.display = 'none';
-        chatContainer.querySelector('.new-conversation').style.display = 'none';
-        chatInterface.classList.add('active');
-
-        createBotMessage(data);
+        
+        if (userMessage) {
+            appendBotMessage(data.message);
+        }
     }
 
     async function sendMessage(userMessage) {
@@ -172,8 +191,8 @@
         messagesContainer.appendChild(userMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // const response = await fetch("http://127.0.0.1:8000/chat", {
-        const response = await fetch("https://ai-d-chatbot.onrender.com/chat", {
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+        // const response = await fetch("https://ai-d-chatbot.onrender.com/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({message: userMessage, thread_id: sessionStorage.getItem("thread_id")})
@@ -181,7 +200,15 @@
 
         const data = await response.json();
 
-        createBotMessage(data);
+        if (data.message === "True") {
+            appendBotMessage("Tot straks! Bye!")
+            appendBotMessage("Dit gesprek is beëindigd. Wil je een nieuw gesprek beginnen, stuur dan een nieuw bericht. This conversation ended. If you want to start a new conversation, send a new message.")
+            clearTimeout(timeoutId);
+            endConversation();
+            conversationEnded = true;
+        } else {
+          appendBotMessage(data.message);    
+        }
     }
 
 
@@ -192,8 +219,9 @@
     function continueConversation() {
         userConversationMessage = textarea.value.trim();
         if (userConversationMessage) {
-            if (userIsLate) {
+            if (userIsLate || conversationEnded) {
                 startNewConversation(userConversationMessage);
+                conversationEnded = false;
             } else {
                 sendMessage(userConversationMessage);
             }
@@ -226,4 +254,11 @@
             chatContainer.classList.remove('open');
         });
     });
+
+    window.addEventListener("beforeunload", (e) => {
+        navigator.sendBeacon("/end_conversation", {thread_id: sessionStorage.getItem("thread_id")})
+
+        e.preventDefault();
+        // event.returnValue = "";
+    })
 })();
