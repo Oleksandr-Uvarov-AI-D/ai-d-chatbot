@@ -36,7 +36,8 @@ app = FastAPI(lifespan=lifespan)
 # Allow frontend (JavaScript in browser) to talk to backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
+    # allow_origins=["*"],  
+    allow_origins=["https://widget-code.onrender.com"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
