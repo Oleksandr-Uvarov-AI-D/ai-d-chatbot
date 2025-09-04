@@ -9,6 +9,7 @@ import os
 import time
 import json
 import asyncio
+import requests
 from contextlib import asynccontextmanager
 from supabase import create_client, Client
 
@@ -36,8 +37,8 @@ app = FastAPI(lifespan=lifespan)
 # Allow frontend (JavaScript in browser) to talk to backend
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=["*"],  
-    allow_origins=["https://widget-code.onrender.com"],  
+    allow_origins=["*"],  
+    # allow_origins=["https://widget-code.onrender.com"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -248,20 +249,50 @@ def make_summary(thread_id):
     insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", True)
 
 
+CAL_API_KEY = os.getenv("CAL_API_KEY")
+# headers = {"Authorization": f"Bearer {CAL_API_KEY}"}
+headers = {"cal-api-version": "2024-08-13",
+            "Content-Type":
+            "application/json", "Authorization": f"Bearer {CAL_API_KEY}"}
+
+# response = requests.get("https://api.cal.com/v2/event-types", headers=headers)
+
+# data = response.json()
+# for group in data["data"]["eventTypeGroups"]:
+#     for et in group["eventTypes"]:
+#         if et["length"] == 30:
+#             event_type_id = et["id"]
 
 
 
+def book_cal_event(name, email, phoneNumber, date, time):
+    payload = {
+        "start": f"{date}T{time}:00Z",
+        "attendee": {
+            "name": name,
+            "email": email,
+            "timeZone": "Europe/Brussels",
+            "phoneNumber": phoneNumber,
+            "language": "en"
+        },
+        "eventTypeId": 32343678,
+        "metadata": {"key": "value"}
+    }
+    response = requests.post(f"https://api.cal.com/v2/bookings", headers=headers, json=payload)
+
+    print(response.status_code)
+    print(response.json())
+    print()
+    print()
+    return response.json()
+
+# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08", "10:00")
 
 
 # Further steps
 # 1. cal.com api to make a meeting 
-# 2. layout fix (logo etc), make sure the times (x) symbol actually works
-# 3. dot dot dot bubble
-# 4. word documentation
+# 2. word documentation
 
 # WXyT79wgf9s4R6w3
 
-# things to point out
 
-# 1. When the user sends their last message, the conversation doesn't end until time runs out.
-# 2. auto-reply message (could do it in both languages)
