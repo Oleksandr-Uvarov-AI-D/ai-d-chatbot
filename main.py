@@ -208,18 +208,6 @@ async def chat(request: Request):
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
       
-    # chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
-
-    # chatbot_message = try_to_make_an_appointment(chatbot_message, user_thread_id)
-
-    # response = (
-    #     supabase.table("chatbot_data")
-    #     .insert({"role": "assistant", "message": chatbot_message["message"], "thread_id": user_thread_id})
-    #     .execute()
-    # )
-
-    # return chatbot_message
-
     chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
 
     return try_to_make_an_appointment(chatbot_message, user_thread_id)
