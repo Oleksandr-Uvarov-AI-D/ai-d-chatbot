@@ -65,8 +65,8 @@ def try_to_make_an_appointment(chatbot_message, thread_id):
         return {"role": "assistant", "message": chatbot_message, "thread_id": thread_id}
 
 
-# CAL_API_KEY = os.getenv("CAL_API_KEY")
-CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
+CAL_API_KEY = os.getenv("CAL_API_KEY")
+# CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
 headers_event = {"Authorization": f"Bearer {CAL_API_KEY}"}
 headers = {"cal-api-version": "2024-08-13",
             "Content-Type": "application/json",
@@ -82,8 +82,8 @@ response = requests.get("https://api.cal.com/v2/event-types", headers=headers_ev
 
 # print(event_type_id)
 
-# event_type_id = int(os.getenv("EVENT_TYPE_ID"))
-event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
+event_type_id = int(os.getenv("EVENT_TYPE_ID"))
+# event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
 
 def book_cal_event(name, email, phoneNumber, start, language="nl", tz="Europe/Brussels"):
     dt = parser.isoparse(start)
