@@ -8,8 +8,8 @@
             // logo: '../build/logo.png',
             logo: "logo.png",
             name: 'AI-D',
-            welcomeText: 'Hello, how can we help?',
-            responseTimeText: 'We usually respond immediately.',
+            welcomeText: 'Hallo, hoe kunnen we je helpen?',
+            responseTimeText: 'Onze AI-assistent Jaimes staat voor je klaar',
             poweredBy: {
                 text: 'Powered by ai-d',
                 link: 'https://ai-d.be'
@@ -49,7 +49,7 @@
                 <svg class="message-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                     <path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/>
                 </svg>
-                Send us a message
+                Stuur ons een bericht.
             </button>
             <p class="response-text">${config.branding.responseTimeText}</p>
         </div>
@@ -100,8 +100,8 @@
     let userConversationMessage;
 
     async function endConversation() {
-        // const response = await fetch("http://127.0.0.1:8000/end_conversation", {
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
+        const response = await fetch("http://127.0.0.1:8000/end_conversation", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
             method: "POST",
             headers: {"Content-type": "application/json"},
             body: JSON.stringify({thread_id: sessionStorage.getItem("thread_id")})
@@ -152,11 +152,11 @@
             chatContainer.querySelector('.brand-header').style.display = 'none';
             chatContainer.querySelector('.new-conversation').style.display = 'none';
             chatInterface.classList.add('active');
-            appendBotMessage("Hallo, hoe kan ik u vandaag helpen?");
+            appendBotMessage("Hallo, ik ben Jaimes, de AI-assistent van AI-D. Waarmee kan ik je vandaag helpen?");
         }
 
-        // const response = await fetch("http://127.0.0.1:8000/start", {
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
+        const response = await fetch("http://127.0.0.1:8000/start", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({message: messageToSend})
@@ -180,11 +180,11 @@
         messagesContainer.appendChild(userMessageDiv);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        // const response = await fetch("http://127.0.0.1:8000/chat", {
 
         const indicator = showTypingIndicator();
 
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({message: userMessage, thread_id: sessionStorage.getItem("thread_id")})
@@ -195,7 +195,7 @@
         removeTypingIndicator(indicator);
 
         if (data.message === "True") {
-            appendBotMessage("Dit gesprek is beëindigd. Wil je een nieuw gesprek beginnen, stuur dan een nieuw bericht. This conversation ended. If you want to start a new conversation, send a new message.")
+            appendBotMessage("Ons gesprek is afgerond. Heb je later nog vragen? Dan kan je ons altijd opnieuw contacteren. This conversation ended. If you want to start a new conversation, send a new message.")
             clearTimeout(timeoutId);
             endConversation();
             conversationEnded = true;

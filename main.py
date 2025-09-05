@@ -1,17 +1,16 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from azure.ai.projects import AIProjectClient
-from azure.identity import DefaultAzureCredential
-from azure.ai.agents.models import ListSortOrder
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 import os
 import time
 import json
 import asyncio
-import requests
 from contextlib import asynccontextmanager
 from supabase import create_client, Client
+from util import get_today_date, extract_json 
+from init_azure import get_agents, make_message, get_message_list, create_thread, run_agent
+from cal_com_methods import try_to_make_an_appointment
 
 load_dotenv()
 
@@ -44,18 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-credential=DefaultAzureCredential()
-
-project = AIProjectClient(
-    credential=credential,
-    endpoint=os.getenv("AI_D_PROJECT_ENDPOINT")
-)
-
-
-
-agent_data = project.agents.get_agent(os.getenv("AGENT_DATA_ID"))
-agent_summary = project.agents.get_agent(os.getenv("AGENT_SUMMARY_ID"))
-agent_summary_thread = project.agents.threads.create()
+agent_data, agent_summary, agent_summary_thread = get_agents()
 
 
 # Store the last message's time for each thread.
@@ -85,13 +73,12 @@ async def save_finished_threads():
         for thread_id in threads_to_remove:
             ONGOING_THREADS.pop(thread_id, None)
 
-        print("thread is working")
         await asyncio.sleep(30)
 
 
-def insert_chatbot_message(thread_id, table_name, json_msg=False):
+def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
     """Function that gets a chatbot message and
-    inserts it into supabase database / displays it in the widget for the user.
+    inserts it into supabase database."
     
     Args:
         thread_id: thread id of the conversation in question
@@ -102,29 +89,41 @@ def insert_chatbot_message(thread_id, table_name, json_msg=False):
         Dict: A dictionary consisting of the role (assistant/chatbot in this case), the message, and the thread id.
     """
 
-    messages = list(project.agents.messages.list(
-        thread_id=thread_id,
-        order=ListSortOrder.ASCENDING
-        ))
+    messages = get_message_list(thread_id)
     
     for message in reversed(messages):
         if message.role == "assistant" and message.text_messages:
             message_to_insert = message.text_messages[-1].text.value
-            if json_msg:
-                message_to_insert = json.loads(message_to_insert)
-                response = (
-                    supabase.table(table_name)
-                    .insert(message_to_insert)
-                    .execute()
-                )
-                return None
-            else:
-                response = (
-                    supabase.table(table_name)
-                    .insert({"role": "assistant", "message": message_to_insert, "thread_id": thread_id})
-                    .execute()
-                )
-                return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
+            try:
+                message_to_insert = extract_json(message_to_insert)
+
+                # print("message_to_insert", message_to_insert)
+                # print(type(message_to_insert))
+
+                if chatbot_type == "summary":
+                    response = (
+                        supabase.table(table_name)
+                        .insert(message_to_insert)
+                        .execute()
+                    )
+                    return None
+                else:
+                    msg = message_to_insert["message"]
+                    response = (
+                        supabase.table(table_name)
+                        .insert(msg)
+                        .execute()
+                    )
+                    print("chatbot type: data", "msg: ", msg)
+                    return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
+
+            except ValueError:
+                    response = (
+                        supabase.table(table_name)
+                        .insert(message_to_insert)
+                        .execute()
+                    )
+                    return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
     
     return {"role": "assistant", "message": "No response", "thread_id": thread_id}
 
@@ -146,11 +145,19 @@ async def give_thread_id(request: Request):
     user_input = data["message"]
 
     # Creating a thread for a new user
-    thread = project.agents.threads.create()
+    thread = create_thread()
+
+    # Telling the bot today's date so it doesn't make mistakes when reserving an appointment.
+    # Executed every time a conversation is started so that it is relevant for every conversation.
+    today = get_today_date()
+
+    make_message(thread.id, "user", f"System message: Vandaag is {today[0]}, {today[1]}. Gebruik deze datum altijd als referentie")
 
     # In case it's an initial message when the user clicks on start a conversation
     # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
     if user_input == None:
+        # Process today's date for conversation
+        run = run_agent(thread.id, agent_data.id)
         return {"thread_id": thread.id}
     else:
         response_user = (
@@ -163,21 +170,23 @@ async def give_thread_id(request: Request):
     ONGOING_THREADS[thread.id] = time.time() 
 
     # Initial message to get initial response from the chatbot
-    message = project.agents.messages.create(
-        thread_id=thread.id,
-        role="user",
-        content=user_input
-    )
+    make_message(thread.id, "user", user_input)
 
-    run = project.agents.runs.create_and_process(
-        thread_id=thread.id,
-        agent_id=agent_data.id
-    )
+    run = run_agent(thread.id, agent_data.id)
 
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
     
-    return insert_chatbot_message(thread.id, "chatbot_data")
+
+    chatbot_message =  insert_chatbot_message(thread.id, "chatbot_data")
+
+    # response = (
+    #     supabase.table("chatbot_data")
+    #     .insert({"role": "assistant", "message": chatbot_message["message"], "thread_id": thread.id})
+    #     .execute()
+    # )
+    
+    return chatbot_message
 
 @app.post("/chat")
 async def chat(request: Request):
@@ -186,11 +195,7 @@ async def chat(request: Request):
     user_thread_id = data["thread_id"]
     ONGOING_THREADS[user_thread_id] = time.time() 
 
-    message = project.agents.messages.create(
-        thread_id=user_thread_id,
-        role="user",
-        content=user_input
-    )
+    make_message(user_thread_id, "user", user_input)
 
     response_user = (
         supabase.table("chatbot_data")
@@ -198,16 +203,28 @@ async def chat(request: Request):
         .execute()
     )
 
-    run = project.agents.runs.create_and_process(
-        thread_id=user_thread_id,
-        agent_id=agent_data.id
-    )
+    run = run_agent(user_thread_id, agent_data.id)
 
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
       
-    return insert_chatbot_message(user_thread_id, "chatbot_data")
+    # chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
 
+    # chatbot_message = try_to_make_an_appointment(chatbot_message, user_thread_id)
+
+    # response = (
+    #     supabase.table("chatbot_data")
+    #     .insert({"role": "assistant", "message": chatbot_message["message"], "thread_id": user_thread_id})
+    #     .execute()
+    # )
+
+    # return chatbot_message
+
+    chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
+
+    return try_to_make_an_appointment(chatbot_message, user_thread_id)
+    return try_to_make_an_appointment(chatbot_message["message"], user_thread_id)
+    
 @app.post("/end_conversation")
 async def end_conversation(request: Request):
     data = await request.json()
@@ -234,60 +251,20 @@ def make_summary(thread_id):
     conversation = "".join(f"{message['role']}: {message['message']}\n" for message in message_list)
 
     # Make a message with conversation as value (summary agent)
-    message = project.agents.messages.create(
-        thread_id=agent_summary_thread.id,
-        role="user",
-        content=conversation
-    )
+    make_message(agent_summary_thread.id, "user", conversation)
 
     # Pass the message onto summary agent
-    run = project.agents.runs.create_and_process(
-        thread_id=agent_summary_thread.id,
-        agent_id=agent_summary.id
-    )
+    run = run_agent(agent_summary_thread.id, agent_summary.id)
 
-    insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", True)
+    insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", "summary")
 
+# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08T10:00:00Z")
+# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08T10:00:00Z")
 
-CAL_API_KEY = os.getenv("CAL_API_KEY")
-# headers = {"Authorization": f"Bearer {CAL_API_KEY}"}
-headers = {"cal-api-version": "2024-08-13",
-            "Content-Type":
-            "application/json", "Authorization": f"Bearer {CAL_API_KEY}"}
-
-# response = requests.get("https://api.cal.com/v2/event-types", headers=headers)
-
-# data = response.json()
-# for group in data["data"]["eventTypeGroups"]:
-#     for et in group["eventTypes"]:
-#         if et["length"] == 30:
-#             event_type_id = et["id"]
-
-
-
-def book_cal_event(name, email, phoneNumber, date, time):
-    payload = {
-        "start": f"{date}T{time}:00Z",
-        "attendee": {
-            "name": name,
-            "email": email,
-            "timeZone": "Europe/Brussels",
-            "phoneNumber": phoneNumber,
-            "language": "en"
-        },
-        "eventTypeId": 32343678,
-        "metadata": {"key": "value"}
-    }
-    response = requests.post(f"https://api.cal.com/v2/bookings", headers=headers, json=payload)
-
-    print(response.status_code)
-    print(response.json())
-    print()
-    print()
-    return response.json()
-
-# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08", "10:00")
-
+# print(get_available_slots(event_type_id, "2025-09-12T00:00:00+02:00", "2025-09-12T23:59:59+02:00", "2025-09-12T12:00:00+02:00"))
+# print(get_available_slots(event_type_id, start_ts="2025-09-07T00:00:00+02:00", end_ts="2025-09-30T23:59:59+02:00", target_tz="2025-09-24T16:30:00+02:00"))
+# print(get_available_slots(event_type_id, "2025-09-15T09:00:00"))
+# print(get_available_slots())
 
 # Further steps
 # 1. cal.com api to make a meeting 
@@ -296,3 +273,8 @@ def book_cal_event(name, email, phoneNumber, date, time):
 # WXyT79wgf9s4R6w3
 
 
+# can't reschedule
+
+# still getting appointments 2 hours later on cal.com why
+# should i point out that we're using a europe/brussels time zone?
+# bubbles after start (second time)
