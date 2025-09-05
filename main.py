@@ -108,7 +108,11 @@ def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
                     )
                     return None
                 else:
+                    print("else block")
+                    print("message to insert", message_to_insert)
                     msg = message_to_insert["message"]
+                    print("msg", msg)
+
                     response = (
                         supabase.table(table_name)
                         .insert(msg)
@@ -118,9 +122,11 @@ def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
                     return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
 
             except ValueError:
+                    print("value error block")
+                    print("message to insert", message_to_insert)
                     response = (
                         supabase.table(table_name)
-                        .insert(message_to_insert)
+                        .insert({"role": "assistant", "thread_id": thread_id, "message": message_to_insert})
                         .execute()
                     )
                     return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}

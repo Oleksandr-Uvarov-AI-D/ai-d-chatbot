@@ -100,8 +100,8 @@
     let userConversationMessage;
 
     async function endConversation() {
-        // const response = await fetch("http://127.0.0.1:8000/end_conversation", {
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
+        const response = await fetch("http://127.0.0.1:8000/end_conversation", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
             method: "POST",
             headers: {"Content-type": "application/json"},
             body: JSON.stringify({thread_id: sessionStorage.getItem("thread_id")})
@@ -141,6 +141,8 @@
         // (when the time of the previous one ran out)
 
         let messageToSend = null;
+
+        let indicator = null;
         if (userMessage) {
             messageToSend = userMessage;
             const userMessageDiv = document.createElement('div');
@@ -148,7 +150,7 @@
             userMessageDiv.textContent = userMessage;
             messagesContainer.appendChild(userMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            const indicator = showTypingIndicator();
+            indicator = showTypingIndicator();
         } else {
             chatContainer.querySelector('.brand-header').style.display = 'none';
             chatContainer.querySelector('.new-conversation').style.display = 'none';
@@ -157,8 +159,8 @@
         }
 
 
-        // const response = await fetch("http://127.0.0.1:8000/start", {
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
+        const response = await fetch("http://127.0.0.1:8000/start", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({message: messageToSend})
@@ -185,8 +187,8 @@
 
         const indicator = showTypingIndicator();
 
-        // const response = await fetch("http://127.0.0.1:8000/chat", {
-        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({message: userMessage, thread_id: sessionStorage.getItem("thread_id")})
