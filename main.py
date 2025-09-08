@@ -50,7 +50,7 @@ agent_data, agent_summary, agent_summary_thread = get_agents()
 ONGOING_THREADS = {}
 
 # How much time a user has to respond before the chat is archived (in seconds)
-time_limit_user_message = 30
+time_limit_user_message = 600
 
 async def save_finished_threads():
     while True:
@@ -73,21 +73,30 @@ async def save_finished_threads():
         for thread_id in threads_to_remove:
             ONGOING_THREADS.pop(thread_id, None)
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(600)
 
 
-def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
+def insert_chatbot_message(thread_id, table_name=None, chatbot_type="data", msg=None):
     """Function that gets a chatbot message and
     inserts it into supabase database."
     
     Args:
         thread_id: thread id of the conversation in question
         table_name: supabase table to where the data is going to be sent
-        json_msg: if set to True, the format of message is going to be sent in JSON
+        chatbot_type: which chatbot to send the data to
+        msg: optional. If not None, just adds that message to the supabase. Used to store automatic messages (successful/unsuccessful reservation)
 
     Returns:
         Dict: A dictionary consisting of the role (assistant/chatbot in this case), the message, and the thread id.
     """
+
+    if msg:
+        response = (
+        supabase.table("chatbot_data")
+        .insert({"role": "assistant", "thread_id": thread_id, "message": msg})
+        .execute()
+        )
+        return
 
     messages = get_message_list(thread_id)
     
@@ -97,9 +106,7 @@ def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
             try:
                 message_to_insert = extract_json(message_to_insert)
 
-                # print("message_to_insert", message_to_insert)
-                # print(type(message_to_insert))
-
+                # Summary agent
                 if chatbot_type == "summary":
                     response = (
                         supabase.table(table_name)
@@ -107,23 +114,19 @@ def insert_chatbot_message(thread_id, table_name, chatbot_type="data"):
                         .execute()
                     )
                     return None
+                # Data agent
                 else:
-                    print("else block")
-                    print("message to insert", message_to_insert)
                     msg = message_to_insert["message"]
-                    print("msg", msg)
-
                     response = (
                         supabase.table(table_name)
                         .insert(msg)
                         .execute()
                     )
-                    print("chatbot type: data", "msg: ", msg)
                     return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
 
+            # Happens in case it's a pure message rather than JSON
+            # Caused by extract_json method
             except ValueError:
-                    print("value error block")
-                    print("message to insert", message_to_insert)
                     response = (
                         supabase.table(table_name)
                         .insert({"role": "assistant", "thread_id": thread_id, "message": message_to_insert})
@@ -162,7 +165,6 @@ async def give_thread_id(request: Request):
     # In case it's an initial message when the user clicks on start a conversation
     # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
     if user_input == None:
-        # Process today's date for conversation
         run = run_agent(thread.id, agent_data.id)
         return {"thread_id": thread.id}
     else:
@@ -185,12 +187,6 @@ async def give_thread_id(request: Request):
     
 
     chatbot_message =  insert_chatbot_message(thread.id, "chatbot_data")
-
-    # response = (
-    #     supabase.table("chatbot_data")
-    #     .insert({"role": "assistant", "message": chatbot_message["message"], "thread_id": thread.id})
-    #     .execute()
-    # )
     
     return chatbot_message
 
@@ -216,8 +212,10 @@ async def chat(request: Request):
       
     chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
 
-    return try_to_make_an_appointment(chatbot_message, user_thread_id)
-    return try_to_make_an_appointment(chatbot_message["message"], user_thread_id)
+    msg =  try_to_make_an_appointment(chatbot_message)
+
+    insert_chatbot_message(user_thread_id, msg=msg)
+    return msg
     
 @app.post("/end_conversation")
 async def end_conversation(request: Request):
@@ -240,8 +238,6 @@ def make_summary(thread_id):
         .execute()
         ).data
 
-    print(message_list)
-
     conversation = "".join(f"{message['role']}: {message['message']}\n" for message in message_list)
 
     # Make a message with conversation as value (summary agent)
@@ -251,23 +247,3 @@ def make_summary(thread_id):
     run = run_agent(agent_summary_thread.id, agent_summary.id)
 
     insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", "summary")
-
-# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08T10:00:00Z")
-# book_cal_event("apelsin", "sashka15002@gmail.com", "+3212578167", "2025-09-08T10:00:00Z")
-
-# print(get_available_slots(event_type_id, "2025-09-12T00:00:00+02:00", "2025-09-12T23:59:59+02:00", "2025-09-12T12:00:00+02:00"))
-# print(get_available_slots(event_type_id, start_ts="2025-09-07T00:00:00+02:00", end_ts="2025-09-30T23:59:59+02:00", target_tz="2025-09-24T16:30:00+02:00"))
-# print(get_available_slots())
-
-# Further steps
-# 1. cal.com api to make a meeting 
-# 2. word documentation
-
-# WXyT79wgf9s4R6w3
-
-
-# can't reschedule
-
-# still getting appointments 2 hours later on cal.com why
-# should i point out that we're using a europe/brussels time zone?
-# bubbles after start (second time)

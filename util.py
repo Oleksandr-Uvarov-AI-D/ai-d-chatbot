@@ -61,7 +61,7 @@ def get_month_name(number, language):
         month_name = "december"
 
 
-    # Using this because in English months are capitalized but not in Dutch
+    # Using this because months are capitalized in English but not in Dutch
     if language == "en":
         return month_name.capitalize()
     return month_name
@@ -72,6 +72,8 @@ def get_today_date():
     return (datetime.datetime.now().strftime("%A"), datetime.date.today().isoformat())
 
 
+# This method is used to make sure JSON is always extracted. 
+# (Sometimes a chatbot replies with a text + JSON, so this eliminates errors by removing that redundant text)
 def extract_json(s: str):
     if isinstance(s, dict):
         return s
