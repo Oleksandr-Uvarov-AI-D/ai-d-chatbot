@@ -257,7 +257,6 @@ def make_summary(thread_id):
 
 # print(get_available_slots(event_type_id, "2025-09-12T00:00:00+02:00", "2025-09-12T23:59:59+02:00", "2025-09-12T12:00:00+02:00"))
 # print(get_available_slots(event_type_id, start_ts="2025-09-07T00:00:00+02:00", end_ts="2025-09-30T23:59:59+02:00", target_tz="2025-09-24T16:30:00+02:00"))
-# print(get_available_slots(event_type_id, "2025-09-15T09:00:00"))
 # print(get_available_slots())
 
 # Further steps
