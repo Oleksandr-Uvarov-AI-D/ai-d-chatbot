@@ -5,8 +5,8 @@
     
     const config = {
         branding: {
-            // logo: '../build/logo.png',
-            logo: "logo.png",
+            logo: '../build/logo.png',
+            // logo: "logo.png",
             name: 'AI-D',
             welcomeText: 'Hallo, hoe kunnen we je helpen?',
             responseTimeText: 'Onze AI-assistent Jaimes staat voor je klaar',
@@ -100,8 +100,8 @@
     let userConversationMessage;
 
     async function endConversation() {
-        const response = await fetch("http://127.0.0.1:8000/end_conversation", {
-        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
+        // const response = await fetch("http://127.0.0.1:8000/end_conversation", {
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/end_conversation", {
             method: "POST",
             headers: {"Content-type": "application/json"},
             body: JSON.stringify({thread_id: sessionStorage.getItem("thread_id")})
@@ -160,8 +160,8 @@
         }
 
 
-        const response = await fetch("http://127.0.0.1:8000/start", {
-        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
+        // const response = await fetch("http://127.0.0.1:8000/start", {
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/start", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({message: messageToSend})
@@ -188,8 +188,8 @@
 
         const indicator = showTypingIndicator();
 
-        const response = await fetch("http://127.0.0.1:8000/chat", {
-        // const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
+        // const response = await fetch("http://127.0.0.1:8000/chat", {
+        const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({message: userMessage, thread_id: sessionStorage.getItem("thread_id")})
