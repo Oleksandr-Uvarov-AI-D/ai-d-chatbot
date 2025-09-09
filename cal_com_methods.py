@@ -11,17 +11,17 @@ from zoneinfo import ZoneInfo
 load_dotenv()
 
 
-CAL_API_KEY = os.getenv("CAL_API_KEY")
-event_type_id = int(os.getenv("EVENT_TYPE_ID"))
+# CAL_API_KEY = os.getenv("CAL_API_KEY")
+# event_type_id = int(os.getenv("EVENT_TYPE_ID"))
 
-# CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
+CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
 headers_event = {"Authorization": f"Bearer {CAL_API_KEY}"}
 headers = {"cal-api-version": "2024-08-13",
             "Content-Type": "application/json",
               "Authorization": f"Bearer {CAL_API_KEY}"}
 
 response = requests.get("https://api.cal.com/v2/event-types", headers=headers_event)
-# event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
+event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
 
 
 
