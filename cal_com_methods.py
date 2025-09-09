@@ -42,17 +42,16 @@ def try_to_make_an_appointment(chatbot_message):
 
 
         name, email, phone_number= message_json["name"], message_json["email"], message_json["phone_number"]
-        start, language, msg = message_json["start"], message_json["language"], message_json["message"]
+        start, language, msg = message_json["start"], "nl", message_json["message"]
         status_code = book_cal_event(name, email, phone_number, start, language)
         if status_code == 400:
             available_slots = get_days_and_times(event_type_id, start, language=language)
-            print("appointment language", language)
             if language == "en":
                 msg = f"We are sorry, but this timeframe is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
             else: 
                 msg = f"Helaas is dit tijdsbestek niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
 
-        run = run_agent(agent_summary_thread.id, agent_summary.id)
+            run = run_agent(agent_summary_thread.id, agent_summary.id)
 
         return {"role": "assistant", "message": msg, "thread_id": thread_id}
     except (ValueError, json.decoder.JSONDecodeError) as e:
@@ -77,7 +76,6 @@ def book_cal_event(name, email, phoneNumber, start, language="nl", tz="Europe/Br
     }
     response = requests.post(f"https://api.cal.com/v2/bookings", headers=headers, json=payload)
 
-    print(response.json())
     status_code = response.status_code
     return status_code
 
@@ -177,3 +175,8 @@ def get_days_and_times(event_type_id, target, start=None, end=None, tz="Europe/B
         return (f"{day_number_after} {month_name_after}, {formatted_time_after}", f"{day_number_after_two} {month_name_after_two}, {formatted_time_after_two}")
 
     return (f"{day_number_before} {month_name_before}, {formatted_time_before}", f"{day_number_after} {month_name_after}, {formatted_time_after}")
+
+
+
+# check js + css on render without html
+# make responses smaller (copy of prompt)

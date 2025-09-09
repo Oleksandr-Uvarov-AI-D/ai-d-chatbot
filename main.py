@@ -8,7 +8,7 @@ import json
 import asyncio
 from contextlib import asynccontextmanager
 from supabase import create_client, Client
-from util import get_today_date, extract_json 
+from util import get_today_date, extract_json, remove_source
 from init_azure import get_agents, make_message, get_message_list, create_thread, run_agent
 from cal_com_methods import try_to_make_an_appointment
 
@@ -36,8 +36,8 @@ app = FastAPI(lifespan=lifespan)
 # Allow frontend (JavaScript in browser) to talk to backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  
-    # allow_origins=["https://widget-code.onrender.com"],  
+    # allow_origins=["*"],  
+    allow_origins=["https://widget-code.onrender.com"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,7 +93,7 @@ def insert_chatbot_message(thread_id, table_name=None, chatbot_type="data", msg=
     if msg:
         response = (
         supabase.table("chatbot_data")
-        .insert({"role": "assistant", "thread_id": thread_id, "message": msg})
+        .insert({"role": "assistant", "thread_id": thread_id, "message": msg["message"]})
         .execute()
         )
         return
@@ -103,26 +103,25 @@ def insert_chatbot_message(thread_id, table_name=None, chatbot_type="data", msg=
     for message in reversed(messages):
         if message.role == "assistant" and message.text_messages:
             message_to_insert = message.text_messages[-1].text.value
+            message_to_insert = remove_source(message_to_insert)
+
             try:
                 message_to_insert = extract_json(message_to_insert)
 
                 # Summary agent
                 if chatbot_type == "summary":
+                    
                     response = (
                         supabase.table(table_name)
                         .insert(message_to_insert)
                         .execute()
                     )
-                    return None
-                # Data agent
+                    return 
+                # For unambiguity purposes. 
+                # In case the chatbot type is data and the message doesn't cause a ValueError, 
+                # it means that it's a JSON message of reservation data which we don't want to store.
                 else:
-                    msg = message_to_insert["message"]
-                    response = (
-                        supabase.table(table_name)
-                        .insert(msg)
-                        .execute()
-                    )
-                    return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
+                    pass
 
             # Happens in case it's a pure message rather than JSON
             # Caused by extract_json method
@@ -132,7 +131,8 @@ def insert_chatbot_message(thread_id, table_name=None, chatbot_type="data", msg=
                         .insert({"role": "assistant", "thread_id": thread_id, "message": message_to_insert})
                         .execute()
                     )
-                    return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
+            
+            return {"role": "assistant", "message": message_to_insert, "thread_id": thread_id}
     
     return {"role": "assistant", "message": "No response", "thread_id": thread_id}
 
@@ -212,9 +212,10 @@ async def chat(request: Request):
       
     chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
 
-    msg =  try_to_make_an_appointment(chatbot_message)
+    msg = try_to_make_an_appointment(chatbot_message)
 
-    insert_chatbot_message(user_thread_id, msg=msg)
+    if msg["message"] != chatbot_message["message"]:
+        insert_chatbot_message(user_thread_id, msg=msg)
     return msg
     
 @app.post("/end_conversation")
@@ -223,7 +224,6 @@ async def end_conversation(request: Request):
     thread_id = data["thread_id"]
 
     ONGOING_THREADS.pop(thread_id, None)
-    print(thread_id)
 
     make_summary(thread_id)
 

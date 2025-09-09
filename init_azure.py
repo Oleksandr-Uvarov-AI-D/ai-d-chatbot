@@ -3,6 +3,7 @@ from azure.identity import DefaultAzureCredential
 from azure.ai.agents.models import ListSortOrder
 import os
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()
 
@@ -44,6 +45,27 @@ def create_thread():
     
 
 def run_agent(thread_id, agent_id):
+    runs = list(project.agents.runs.list(thread_id=thread_id))
+    # print(len(runs) != 0)
+    # print(list(runs))
+    if len(list(runs)) != 0:
+        # print(len(list(runs)) != 0)
+        # print(len(list(runs)))
+        latest_run = list(runs)[0]
+        # print("working")
+        # for run in runs:
+        #     print(run.created_at)
+
+        while True:
+            latest_run = project.agents.runs.get(
+                thread_id=thread_id,
+                run_id=latest_run.id
+            )
+            if latest_run.status in ("in_progress", "queued"):
+                asyncio.sleep(0.5)
+            else:
+                break
+
     run = project.agents.runs.create_and_process(
         thread_id=thread_id,
         agent_id=agent_id

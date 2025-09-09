@@ -148,6 +148,7 @@
 }
 
 .ai-d-chat-widget .chat-message {
+    white-space: pre-wrap;
     padding: 12px 16px;
     margin: 8px 0;
     border-radius: 12px;
