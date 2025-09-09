@@ -188,6 +188,16 @@
 
         const indicator = showTypingIndicator();
 
+
+        // Avoiding race condition (in case the user sends their
+        // message before a thread_id is set up)
+
+        let thread_id = sessionStorage.getItem("thread_id");
+        while (!thread_id) {
+            await new Promise(r => setTimeout(r, 50));
+            thread_id = sessionStorage.getItem("thread_id");
+        }
+
         // const response = await fetch("http://127.0.0.1:8000/chat", {
         const response = await fetch("https://ai-d-chatbot-bzot.onrender.com/chat", {
             method: "POST",
