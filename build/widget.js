@@ -6,7 +6,7 @@
     const config = {
         branding: {
             // logo: '../build/logo.png',
-            logo: "logo.png",
+            logo: "https://widget-code.onrender.com/logo.png",
             name: 'AI-D',
             welcomeText: 'Hallo, hoe kunnen we je helpen?',
             responseTimeText: 'Onze AI-assistent Jaimes staat voor je klaar',
