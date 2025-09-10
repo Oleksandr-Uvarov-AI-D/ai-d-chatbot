@@ -221,7 +221,7 @@
 
 
     newChatBtn.addEventListener('click', () => {
-       startNewConversation(null)     
+       startNewConversation(null);     
     } );
 
     function continueConversation() {

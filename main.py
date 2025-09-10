@@ -246,10 +246,13 @@ def make_summary(thread_id):
 
     conversation = "".join(f"{message['role']}: {message['message']}\n" for message in message_list)
 
-    # Make a message with conversation as value (summary agent)
-    make_message(agent_summary_thread.id, "user", conversation)
+    # Preventing from storing an empty conversation (when the user started a dialogue but didn't send anything)
+    if conversation != "":
 
-    # Pass the message onto summary agent
-    run = run_agent(agent_summary_thread.id, agent_summary.id)
+        # Make a message with conversation as value (summary agent)
+        make_message(agent_summary_thread.id, "user", conversation)
 
-    insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", "summary")
+        # Pass the message onto summary agent
+        run = run_agent(agent_summary_thread.id, agent_summary.id)
+
+        insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", "summary")
