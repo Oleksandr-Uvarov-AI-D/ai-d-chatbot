@@ -40,12 +40,12 @@ def try_to_make_an_appointment(chatbot_message):
         # Or it's a dict which will be used to fill in data for the appointment further down in this method.
         message_json = extract_json(message)
 
+        available_slots = get_days_and_times(event_type_id, start, language=language)
 
         name, email, phone_number= message_json["name"], message_json["email"], message_json["phone_number"]
-        start, language, msg = message_json["start"], "nl", None
+        start, language, msg = message_json["start"], "nl", f"Je afspraak voor {available_slots[2]} is succesvol ingepland. We nemen spoedig contact met je op."
         status_code = book_cal_event(name, email, phone_number, start, language)
         if status_code == 400:
-            available_slots = get_days_and_times(event_type_id, start, language=language)
             if language == "en":
                 msg = f"We are sorry, but {available_slots[2]} is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
             else: 
