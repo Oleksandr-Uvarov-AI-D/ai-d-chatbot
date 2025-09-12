@@ -3,7 +3,7 @@ from util import get_month_name, extract_json
 import os
 from dotenv import load_dotenv
 import json
-from init_azure import make_message, run_agent, get_agents
+from init_azure import make_message, run_agent, get_agents, get_message_list
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from zoneinfo import ZoneInfo
@@ -42,7 +42,7 @@ def try_to_make_an_appointment(chatbot_message):
 
 
         name, email, phone_number= message_json["name"], message_json["email"], message_json["phone_number"]
-        start, language, msg = message_json["start"], "nl", message_json["message"]
+        start, language, msg = message_json["start"], "nl", None
         status_code = book_cal_event(name, email, phone_number, start, language)
         if status_code == 400:
             available_slots = get_days_and_times(event_type_id, start, language=language)
@@ -51,7 +51,11 @@ def try_to_make_an_appointment(chatbot_message):
             else: 
                 msg = f"Helaas is {available_slots[2]} niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
 
+            
+            make_message(thread_id, "assistant", msg)
             run = run_agent(agent_summary_thread.id, agent_summary.id)
+
+            print(get_message_list(thread_id))
 
         return {"role": "assistant", "message": msg, "thread_id": thread_id}
     except (ValueError, json.decoder.JSONDecodeError) as e:
