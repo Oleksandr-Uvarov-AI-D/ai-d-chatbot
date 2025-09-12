@@ -142,6 +142,8 @@ def get_days_and_times(event_type_id, target, start=None, end=None, tz="Europe/B
     # The closest time to the target (after the target time)
     earliest_time_after_target = response_after_date.json()["data"][earliest_day_after_target][0]["start"]
     day_number_after, month_name_after, formatted_time_after = _extract_day_and_time_out_of_data(earliest_time_after_target, language)
+    target_day, target_month_name, target_formatted_time = _extract_day_and_time_out_of_data(target, language)
+
 
 
     # Get the closest day available to the target (before the target time)
@@ -171,8 +173,6 @@ def get_days_and_times(event_type_id, target, start=None, end=None, tz="Europe/B
         second_earliest_time_after_target = response_after_date.json()["data"][second_earliest_day_after_target][timeframe]["start"]
 
         day_number_after_two, month_name_after_two, formatted_time_after_two = _extract_day_and_time_out_of_data(second_earliest_time_after_target, language)
-
-        target_day, target_month_name, target_formatted_time = _extract_day_and_time_out_of_data(target, language)
 
         return (f"{day_number_after} {month_name_after}, {formatted_time_after}",
                 f"{day_number_after_two} {month_name_after_two}, {formatted_time_after_two}",
