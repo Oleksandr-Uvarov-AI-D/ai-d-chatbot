@@ -180,7 +180,7 @@ def get_days_and_times(event_type_id, target, start=None, end=None, tz="Europe/B
 
     return (f"{day_number_before} {month_name_before}, {formatted_time_before}",
             f"{day_number_after} {month_name_after}, {formatted_time_after}",
-            f"{target_day}, {target_month_name}, {target_formatted_time}")
+            f"{target_day} {target_month_name}, {target_formatted_time}")
              
 
 
