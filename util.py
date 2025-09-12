@@ -2,6 +2,7 @@ from azure.ai.projects import AIProjectClient
 from dotenv import load_dotenv
 import datetime
 import json
+from zoneinfo import ZoneInfo
 
 
 load_dotenv()
@@ -69,7 +70,9 @@ def get_month_name(number, language):
 
 
 def get_today_date():
-    return (datetime.datetime.now().strftime("%A"), datetime.date.today().isoformat())
+    return (datetime.datetime.now().strftime("%A"), datetime.datetime.now(ZoneInfo("Europe/Brussels")).strftime("%H:%M:%S"), datetime.date.today().isoformat())
+
+
 
 
 # This method is used to make sure JSON is always extracted. 

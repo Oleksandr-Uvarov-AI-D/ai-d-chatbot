@@ -166,7 +166,7 @@ async def give_thread_id(request: Request):
     # Executed every time a conversation is started so that it is relevant for every conversation.
     today = get_today_date()
 
-    make_message(thread.id, "user", f"System message: Vandaag is {today[0]}, {today[1]}. Gebruik deze datum altijd als referentie")
+    make_message(thread.id, "user", f"System message: Vandaag is {today[0]}, {today[1]}, {today[2]}. Gebruik deze datum altijd als referentie")
 
     # In case it's an initial message when the user clicks on start a conversation
     # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
