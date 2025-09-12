@@ -53,7 +53,8 @@ def try_to_make_an_appointment(chatbot_message):
 
             
             make_message(thread_id, "assistant", msg)
-            run = run_agent(agent_summary_thread.id, agent_summary.id)
+            # run = run_agent(agent_summary_thread.id, agent_summary.id)
+            run = run_agent(thread_id, agent_data.id)
 
             print(get_message_list(thread_id))
 
