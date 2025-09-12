@@ -47,9 +47,9 @@ def try_to_make_an_appointment(chatbot_message):
         if status_code == 400:
             available_slots = get_days_and_times(event_type_id, start, language=language)
             if language == "en":
-                msg = f"We are sorry, but this timeframe is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
+                msg = f"We are sorry, but {available_slots[2]} is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
             else: 
-                msg = f"Helaas is dit tijdsbestek niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
+                msg = f"Helaas is {available_slots[2]} niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
 
             run = run_agent(agent_summary_thread.id, agent_summary.id)
 
@@ -172,9 +172,16 @@ def get_days_and_times(event_type_id, target, start=None, end=None, tz="Europe/B
 
         day_number_after_two, month_name_after_two, formatted_time_after_two = _extract_day_and_time_out_of_data(second_earliest_time_after_target, language)
 
-        return (f"{day_number_after} {month_name_after}, {formatted_time_after}", f"{day_number_after_two} {month_name_after_two}, {formatted_time_after_two}")
+        target_day, target_month_name, target_formatted_time = _extract_day_and_time_out_of_data(target, language)
 
-    return (f"{day_number_before} {month_name_before}, {formatted_time_before}", f"{day_number_after} {month_name_after}, {formatted_time_after}")
+        return (f"{day_number_after} {month_name_after}, {formatted_time_after}",
+                f"{day_number_after_two} {month_name_after_two}, {formatted_time_after_two}",
+                f"{target_day}, {target_month_name}, {target_formatted_time}")
+
+    return (f"{day_number_before} {month_name_before}, {formatted_time_before}",
+            f"{day_number_after} {month_name_after}, {formatted_time_after}",
+            f"{target_day}, {target_month_name}, {target_formatted_time}")
+             
 
 
 
