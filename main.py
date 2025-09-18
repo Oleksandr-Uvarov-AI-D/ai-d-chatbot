@@ -67,7 +67,7 @@ async def save_finished_threads():
             if time_now - last_message_time > time_limit_user_message:
                 threads_to_remove.append(thread_id)
 
-                make_summary(thread_id)
+                await make_summary(thread_id)
 
         threads_to_check -= 1
         for thread_id in threads_to_remove:
@@ -165,7 +165,7 @@ async def give_thread_id(request: Request):
     # In case it's an initial message when the user clicks on start a conversation
     # (In the other case, it means that the user ran out of time and starts a new conversation but with the chat already opened)
     if user_input == None:
-        run = run_agent(thread.id, agent_data.id)
+        run = await run_agent(thread.id, agent_data.id)
         return {"thread_id": thread.id}
     else:
         response_user = (
@@ -180,7 +180,7 @@ async def give_thread_id(request: Request):
     # Initial message to get initial response from the chatbot
     make_message(thread.id, "user", user_input)
 
-    run = run_agent(thread.id, agent_data.id)
+    run = await run_agent(thread.id, agent_data.id)
 
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
@@ -205,14 +205,14 @@ async def chat(request: Request):
         .execute()
     )
 
-    run = run_agent(user_thread_id, agent_data.id)
+    run = await run_agent(user_thread_id, agent_data.id)
 
     if run.status == "failed":
         return {"role": "assistant", "message": f"Run failed: {run.last_error}"}
       
     chatbot_message = insert_chatbot_message(user_thread_id, "chatbot_data")
 
-    msg = try_to_make_an_appointment(chatbot_message)
+    msg = await try_to_make_an_appointment(chatbot_message)
 
     if msg["message"] != chatbot_message["message"]:
         insert_chatbot_message(user_thread_id, msg=msg)
@@ -225,11 +225,11 @@ async def end_conversation(request: Request):
 
     ONGOING_THREADS.pop(thread_id, None)
 
-    make_summary(thread_id)
+    await make_summary(thread_id)
 
 
 
-def make_summary(thread_id):
+async def make_summary(thread_id):
     # Get a conversation in JSON format
     message_list = (
         supabase.table("chatbot_data")
@@ -248,6 +248,6 @@ def make_summary(thread_id):
         make_message(agent_summary_thread.id, "user", conversation)
 
         # Pass the message onto summary agent
-        run = run_agent(agent_summary_thread.id, agent_summary.id)
+        run = await run_agent(agent_summary_thread.id, agent_summary.id)
 
         insert_chatbot_message(agent_summary_thread.id, "chatbot_summary_data", "summary")

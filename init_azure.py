@@ -44,7 +44,7 @@ def create_thread():
     return project.agents.threads.create()
     
 
-def run_agent(thread_id, agent_id):
+async def run_agent(thread_id, agent_id):
     runs = list(project.agents.runs.list(thread_id=thread_id))
     # print(len(runs) != 0)
     # print(list(runs))
@@ -62,7 +62,7 @@ def run_agent(thread_id, agent_id):
                 run_id=latest_run.id
             )
             if latest_run.status in ("in_progress", "queued"):
-                asyncio.sleep(0.5)
+                await asyncio.sleep(0.5)
             else:
                 break
 
