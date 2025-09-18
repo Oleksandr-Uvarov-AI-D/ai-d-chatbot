@@ -11,6 +11,9 @@ from zoneinfo import ZoneInfo
 load_dotenv()
 
 
+# CAL_API_KEY = os.getenv("CAL_API_KEY")
+# event_type_id = int(os.getenv("EVENT_TYPE_ID"))
+
 CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
 event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
 
