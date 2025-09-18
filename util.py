@@ -1,4 +1,4 @@
-from azure.ai.projects import AIProjectClient
+import re
 from dotenv import load_dotenv
 import datetime
 import json
@@ -104,3 +104,28 @@ def remove_source(s: str):
             break
 
     return s
+
+
+def validate_email(email):
+    """Return email if it's validated. Return False otherwise."""
+    is_valid = bool(re.fullmatch(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}", email))
+
+    if is_valid:
+        return email
+    return is_valid
+
+
+def validate_phone(phone):
+    """Return phone if it's validated. Return False otherwise."""
+    if phone[0] == "+":
+        phone_copy = phone[1:]
+    else:
+        phone_copy = phone
+
+    try:
+        phone_copy = int(phone_copy)
+    except ValueError:
+        return False
+    return phone
+
+

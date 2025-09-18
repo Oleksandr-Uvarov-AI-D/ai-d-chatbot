@@ -36,13 +36,6 @@ app = FastAPI(lifespan=lifespan)
 # Allow frontend (JavaScript in browser) to talk to backend
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=["*"],  
-    # allow_origins=["https://ai-d.be", "https://ai-d.be/diensten/ai-delivery/", "https://ai-d.be/diensten/training/",
-    #                "https://ai-d.be/diensten/ai-hardware-robotics/", "https://ai-d.be/diensten/aid/",
-    #                "https://ai-d.be/nieuws/sectoren/tourism/", "https://ai-d.be/nieuws/sectoren/real-estate/", "https://ai-d.be/nieuws/sectoren/insurance/",
-    #                "https://ai-d.be/nieuws/sectoren/hospitality/", "https://ai-d.be/nieuws/sectoren/legal/", "https://ai-d.be/nieuws/sectoren/public-sector/",
-    #                "https://ai-d.be/nieuws/sectoren/media-entertainment/", "https://ai-d.be/over-ons/", "https://ai-d.be/nieuws/"],
-    # allow_origins=["https://widget-code.onrender.com"],  
     allow_origins=["https://ai-d.be", "https://www.ai-d.be"],
     allow_credentials=True,
     allow_methods=["*"],

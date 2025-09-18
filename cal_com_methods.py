@@ -1,5 +1,5 @@
 import requests
-from util import get_month_name, extract_json
+from util import get_month_name, extract_json, validate_email, validate_phone
 import os
 from dotenv import load_dotenv
 import json
@@ -11,17 +11,15 @@ from zoneinfo import ZoneInfo
 load_dotenv()
 
 
-# CAL_API_KEY = os.getenv("CAL_API_KEY")
-# event_type_id = int(os.getenv("EVENT_TYPE_ID"))
-
 CAL_API_KEY = os.getenv("CAL_API_KEY_MIGUEL")
+event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
+
 headers_event = {"Authorization": f"Bearer {CAL_API_KEY}"}
 headers = {"cal-api-version": "2024-08-13",
             "Content-Type": "application/json",
               "Authorization": f"Bearer {CAL_API_KEY}"}
 
 response = requests.get("https://api.cal.com/v2/event-types", headers=headers_event)
-event_type_id = int(os.getenv("EVENT_TYPE_ID_MIGUEL"))
 
 
 
@@ -45,19 +43,28 @@ def try_to_make_an_appointment(chatbot_message):
 
         name, email, phone_number= message_json["name"], message_json["email"], message_json["phone_number"]
         msg = f"Je afspraak voor {available_slots[2]} is succesvol ingepland. We nemen zo spoedig mogelijk contact met je op."
-        status_code = book_cal_event(name, email, phone_number, start, language)
-        if status_code == 400:
-            if language == "en":
-                msg = f"We are sorry, but {available_slots[2]} is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
-            else: 
-                msg = f"Helaas is {available_slots[2]} niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
+
+        email = validate_email(email)
+        phone_number = validate_phone(phone_number)
+
+        if email == False:
+            msg = 'Helaas heeft het e-mailadres niet de juiste opmaak. Zorg ervoor dat het de structuur "iets@domein.com" heeft.'
+        elif phone_number == False:
+            msg = 'Helaas heeft het telefoonnummer niet de juiste opmaak. Zorg ervoor dat het de structur +1234567890 heeft.'
+        else:
+            status_code = book_cal_event(name, email, phone_number, start, language)
+
+            if status_code == 400:
+                if language == "en":
+                    msg = f"We are sorry, but {available_slots[2]} is not available. The closest timeframes available are {available_slots[0]} and {available_slots[1]}."
+                else: 
+                    msg = f"Helaas is {available_slots[2]} niet beschikbaar. De dichtstbijzijnde tijdslots zijn {available_slots[0]} en {available_slots[1]}." 
 
             
             make_message(thread_id, "assistant", msg)
             # run = run_agent(agent_summary_thread.id, agent_summary.id)
             run = run_agent(thread_id, agent_data.id)
 
-            print(get_message_list(thread_id))
 
         return {"role": "assistant", "message": msg, "thread_id": thread_id}
     except (ValueError, json.decoder.JSONDecodeError) as e:
