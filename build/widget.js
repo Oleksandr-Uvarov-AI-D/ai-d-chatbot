@@ -251,6 +251,7 @@
 
     toggleButton.addEventListener('click', () => {
         chatContainer.classList.toggle('open');
+        toggleButton.style.display = "none";
     });
 
 
@@ -259,6 +260,7 @@
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
             chatContainer.classList.remove('open');
+            toggleButton.style.display = "flex";
         });
     });
 

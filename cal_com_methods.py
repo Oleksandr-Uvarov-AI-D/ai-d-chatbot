@@ -3,7 +3,7 @@ from util import get_month_name, extract_json, validate_email, validate_phone
 import os
 from dotenv import load_dotenv
 import json
-from init_azure import make_message, run_agent, get_agents, get_message_list
+from init_azure import make_message, run_agent, get_agents
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from zoneinfo import ZoneInfo
